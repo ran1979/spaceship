@@ -23,7 +23,7 @@ const GHOST_COLORS := {
 	"clyde": Color(1.0, 0.7, 0.2),
 }
 
-var _items: Array = []  # each: {pos, vel, r, chaser, ghost, t, rot, spin, shape, turn}
+var _items: Array = []  # each: {pos, vel, r, chaser, ghost, t, rot, spin, shape, turn, dead, boom}
 
 # Classic arcade looks: Asteroids-style vector rocks and a Space Invaders pixel crab.
 const ROCK_COLOR := Color(0.85, 0.95, 0.85)
@@ -51,6 +51,8 @@ const INVADER_FRAMES := [
 	],
 ]
 const INVADER_FRAME_TIME := 0.4
+const RESPAWN_TIME := 3.0  # enemies caught in a claim come back after this
+const BOOM_TIME := 0.5  # explosion flash length
 var _speed_scale := 1.0
 
 
@@ -75,7 +77,8 @@ func add(pos: Vector2, vel: Vector2, r: float, chaser: bool, ghost := "") -> voi
 	if not chaser and ghost == "":
 		shape = _rock_shape(r)
 	_items.append({"pos": pos, "vel": vel, "r": r, "chaser": chaser, "ghost": ghost, "t": 0.0,
-		"rot": randf() * TAU, "spin": randf_range(-1.2, 1.2), "shape": shape, "turn": 0.0})
+		"rot": randf() * TAU, "spin": randf_range(-1.2, 1.2), "shape": shape, "turn": 0.0,
+		"dead": 0.0, "boom": 0.0})
 
 
 # Jagged outline with 10 corners, like an Asteroids rock.
@@ -90,6 +93,13 @@ func _rock_shape(r: float) -> PackedVector2Array:
 
 func step(delta: float, region: PackedVector2Array, path: PackedVector2Array, ship_pos: Vector2) -> void:
 	for h in _items:
+		h.boom = maxf(h.boom - delta, 0.0)
+		if h.dead > 0.0:
+			h.dead -= delta
+			if h.dead <= 0.0:
+				h.pos = random_point_in(region, ship_pos)
+				h.vel = _random_dir() * h.vel.length()
+			continue
 		if h.chaser:
 			_steer_alien(h, delta, path)
 		elif h.ghost != "":
@@ -105,6 +115,8 @@ func step(delta: float, region: PackedVector2Array, path: PackedVector2Array, sh
 # True if any hazard touches the cut path or the ship.
 func hit_test(path: PackedVector2Array, ship_pos: Vector2) -> bool:
 	for h in _items:
+		if h.dead > 0.0:
+			continue
 		if h.pos.distance_to(ship_pos) < h.r + SHIP_RADIUS:
 			return true
 		for i in range(path.size() - 1):
@@ -113,12 +125,16 @@ func hit_test(path: PackedVector2Array, ship_pos: Vector2) -> bool:
 	return false
 
 
-# Hazards whose center lies inside a newly claimed zone are moved to fresh open space.
-func respawn_inside(claimed: PackedVector2Array, region: PackedVector2Array, ship_pos: Vector2) -> void:
+# Enemies whose center lies inside a newly claimed zone explode, then come back after RESPAWN_TIME.
+# Returns how many were caught.
+func respawn_inside(claimed: PackedVector2Array, _region: PackedVector2Array, _ship_pos: Vector2) -> int:
+	var caught := 0
 	for h in _items:
-		if Geometry2D.is_point_in_polygon(h.pos, claimed):
-			h.pos = random_point_in(region, ship_pos)
-			h.vel = _random_dir() * h.vel.length()
+		if h.dead <= 0.0 and Geometry2D.is_point_in_polygon(h.pos, claimed):
+			h.dead = RESPAWN_TIME
+			h.boom = BOOM_TIME
+			caught += 1
+	return caught
 
 
 func _steer_alien(h: Dictionary, delta: float, path: PackedVector2Array) -> void:
@@ -223,12 +239,22 @@ func _random_dir() -> Vector2:
 
 func _draw() -> void:
 	for h in _items:
+		if h.boom > 0.0:
+			_draw_boom(h)
+		if h.dead > 0.0:
+			continue
 		if h.chaser:
 			_draw_invader(h)
 		elif h.ghost != "":
 			_draw_ghost(h)
 		else:
 			_draw_rock(h)
+
+
+func _draw_boom(h: Dictionary) -> void:
+	var k: float = 1.0 - h.boom / BOOM_TIME
+	draw_arc(h.pos, h.r + 24.0 * k, 0.0, TAU, 24, Color(1.0, 0.8, 0.3, 1.0 - k), 3.0)
+	draw_circle(h.pos, h.r * (1.0 - k) + 4.0, Color(1.0, 0.6, 0.2, 1.0 - k))
 
 
 func _draw_ghost(h: Dictionary) -> void:

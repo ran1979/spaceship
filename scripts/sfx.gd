@@ -12,6 +12,7 @@ var _claim: AudioStreamPlayer
 var _crash: AudioStreamPlayer
 var _level: AudioStreamPlayer
 var _hum: AudioStreamPlayer
+var _explode: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -28,6 +29,8 @@ func _ready() -> void:
 	]))
 	# Low sustained tone, looped while a cut is being drawn.
 	_hum = _player(_synth([_seg(200, 200, 0.5, SINE, 0.12, false)], true))
+	# Short noise burst with a falling tone: enemy destroyed.
+	_explode = _player(_synth([_seg(0, 0, 0.2, NOISE, 0.45), _seg(260, 50, 0.3, SINE, 0.3)]))
 
 
 func _exit_tree() -> void:
@@ -37,6 +40,10 @@ func _exit_tree() -> void:
 
 func claim() -> void:
 	_claim.play()
+
+
+func explode() -> void:
+	_explode.play()
 
 
 func crash() -> void:

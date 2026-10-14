@@ -155,9 +155,13 @@ func _test_hazards() -> void:
 	var left := PackedVector2Array([Vector2(0, 0), Vector2(50, 0), Vector2(50, 100), Vector2(0, 100)])
 	haz._items.clear()
 	haz.add(Vector2(20, 50), Vector2(90, 0), 6.0, false)
-	haz.respawn_inside(left, right, Vector2(90, 90))
+	var caught: int = haz.respawn_inside(left, right, Vector2(90, 90))
 	h = haz._items[0]
-	_check_bool(Geometry2D.is_point_in_polygon(h.pos, right), "enclosed hazard respawns in remaining field")
+	_check_bool(caught == 1 and h.dead > 0.0, "enemy caught in a claim is removed from play")
+	_check_bool(not haz.hit_test(PackedVector2Array(), Vector2(20, 50)), "removed enemy cannot hit the ship")
+	for i in 3:
+		haz.step(1.0, right, PackedVector2Array(), Vector2(90, 90))
+	_check_bool(h.dead <= 0.0 and Geometry2D.is_point_in_polygon(h.pos, right), "enemy reappears in open field after 3 seconds")
 
 	haz._items.clear()
 	haz.add(Vector2(50, 50), Vector2.ZERO, 6.0, false)

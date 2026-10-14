@@ -98,7 +98,8 @@ func _on_territory_claimed(poly: PackedVector2Array, area: float) -> void:
 	_claimed_area += area
 	var percent := area / (FIELD_SIZE.x * FIELD_SIZE.y) * 100.0
 	_score += roundi(percent * POINTS_PER_PERCENT) * level
-	_hazards.respawn_inside(poly, _player.perimeter(), _player.position)
+	if _hazards.respawn_inside(poly, _player.perimeter(), _player.position) > 0:
+		_sfx.explode()
 	queue_redraw()
 	if _coverage_percent() >= _target_percent(level):
 		_level_done()
