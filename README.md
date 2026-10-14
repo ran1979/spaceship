@@ -61,6 +61,7 @@ tests/test_perimeter.gd Headless test suite
 
 ## Status
 
-Playable through Step 5 of the build plan: movement, cutting, territory claiming,
-coverage HUD, and hazards. Levels, game over, and transition screens are not
-implemented yet.
+All six build steps are implemented: movement, cutting, territory claiming, coverage HUD,
+hazards, and level progression. Each level adds hazards and speed. Reaching 75% coverage
+completes the level; running out of lives ends the game. Press Space on the
+transition screens to continue or restart.

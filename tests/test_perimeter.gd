@@ -3,6 +3,8 @@ extends SceneTree
 # Headless checks: perimeter walking, cutting, claiming, self-collision, retrace, release.
 # Run: ./run.sh --headless -s res://tests/test_perimeter.gd
 
+const MAIN := preload("res://scripts/main.gd")
+
 var _failures := 0
 var _square := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 100), Vector2(0, 100)])
 
@@ -22,6 +24,7 @@ func _process(_delta: float) -> bool:
 	_test_release_cancels()
 	_test_level_win()
 	_test_hazards()
+	_test_game_flow()
 	print("cut tests: %s" % ("PASS" if _failures == 0 else "%d FAILED" % _failures))
 	quit(1 if _failures > 0 else 0)
 	return true
@@ -168,6 +171,34 @@ func _test_hazards() -> void:
 	_check(ship, Vector2(0, 0), "crash on perimeter respawns at first corner")
 	_check_bool(ship.lives == 2, "crash on perimeter costs one life")
 	ship.free()
+
+
+# Level flow: claim to 75% -> level done -> next level; lives run out -> game over -> restart.
+func _test_game_flow() -> void:
+	var main: Node2D = preload("res://scenes/Main.tscn").instantiate()
+	root.add_child(main)
+	var poly := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
+	var field_area: float = 960.0 * 540.0
+	main._on_territory_claimed(poly, field_area * 0.8)
+	_check_bool(main.get("_state") == MAIN.State.LEVEL_DONE, "75%+ enters level done state")
+
+	main._start_level(2)
+	_check_bool(main.get("_state") == MAIN.State.PLAYING and main._player.is_processing(), "next level resumes play")
+	_check_bool(main._hazards._items.size() == 9, "level 2 spawns 8 stars and 1 alien")
+	_check_bool(is_equal_approx(main._coverage_percent(), 0.0), "next level starts with zero coverage")
+
+	main._player.lives = 1
+	main._player.crash()
+	main._player.lives = 0
+	main._play(0.016)
+	_check_bool(main.get("_state") == MAIN.State.GAME_OVER, "no lives left enters game over")
+
+	main._start_game()
+	_check_bool(main.level == 1 and main._player.lives == 3, "restart returns to level 1 with full lives")
+	var cfg: Dictionary = main._level_config(3)
+	_check_bool(cfg.stars == 10 and cfg.aliens == 2, "level 3 has 10 stars and 2 aliens")
+	root.remove_child(main)
+	main.free()
 
 
 func _check(ship: Node2D, expected: Vector2, label: String) -> void:

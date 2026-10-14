@@ -24,6 +24,7 @@ var _start := Vector2.ZERO
 var _start_edge := 0
 var _start_dist := 0.0
 var _needs_release := false  # after a cancel or claim, cut key must be released before restarting
+var _particles: CPUParticles2D
 
 
 func _ready() -> void:
@@ -32,6 +33,25 @@ func _ready() -> void:
 	_add_key_action("move_up", [KEY_UP, KEY_W])
 	_add_key_action("move_down", [KEY_DOWN, KEY_S])
 	_add_key_action("cut", [KEY_SPACE])
+	_particles = CPUParticles2D.new()
+	_particles.local_coords = false
+	_particles.emitting = false
+	_particles.amount = 30
+	_particles.lifetime = 0.5
+	_particles.spread = 180.0
+	_particles.initial_velocity_min = 10.0
+	_particles.initial_velocity_max = 40.0
+	_particles.scale_amount_min = 1.5
+	_particles.scale_amount_max = 3.0
+	_particles.color = TRAIL_COLOR
+	add_child(_particles)
+
+
+func restart(points: PackedVector2Array) -> void:
+	setup(points)
+	_drawing = false
+	_trail.clear()
+	_needs_release = true
 
 
 func setup(points: PackedVector2Array) -> void:
@@ -83,6 +103,7 @@ func step(input: Vector2, delta: float, cutting := false) -> void:
 
 
 func _process(delta: float) -> void:
+	_particles.emitting = _drawing
 	step(Input.get_vector("move_left", "move_right", "move_up", "move_down"), delta, Input.is_action_pressed("cut"))
 	queue_redraw()
 
@@ -96,6 +117,7 @@ func _draw() -> void:
 		for p in _trail:
 			local.append(p - position)
 		local.append(Vector2.ZERO)
+		draw_polyline(local, Color(TRAIL_COLOR, 0.25), 8.0)
 		draw_polyline(local, TRAIL_COLOR, 2.0)
 
 

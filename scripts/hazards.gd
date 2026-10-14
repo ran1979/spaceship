@@ -14,14 +14,20 @@ const ALIEN_STEER_RATE := 1.5  # blend toward desired velocity per second
 const SPAWN_CLEARANCE := 120.0  # keep spawns this far from the ship
 
 var _items: Array = []  # each: {pos, vel, r, chaser}
+var _speed_scale := 1.0
 
 
-func spawn(region: PackedVector2Array, ship_pos: Vector2, star_count: int, alien_count: int) -> void:
+func spawn(region: PackedVector2Array, ship_pos: Vector2, star_count: int, alien_count: int, speed_scale: float) -> void:
+	_speed_scale = speed_scale
 	for i in star_count:
-		var speed := randf_range(STAR_SPEED_MIN, STAR_SPEED_MAX)
+		var speed := randf_range(STAR_SPEED_MIN, STAR_SPEED_MAX) * speed_scale
 		add(_random_point_in(region, ship_pos), _random_dir() * speed, STAR_RADII.pick_random(), false)
 	for i in alien_count:
-		add(_random_point_in(region, ship_pos), _random_dir() * ALIEN_SPEED, ALIEN_RADIUS, true)
+		add(_random_point_in(region, ship_pos), _random_dir() * ALIEN_SPEED * speed_scale, ALIEN_RADIUS, true)
+
+
+func clear() -> void:
+	_items.clear()
 
 
 func add(pos: Vector2, vel: Vector2, r: float, chaser: bool) -> void:
@@ -59,10 +65,10 @@ func respawn_inside(claimed: PackedVector2Array, region: PackedVector2Array, shi
 
 func _steer_alien(h: Dictionary, delta: float, path: PackedVector2Array) -> void:
 	if path.size() < 2:
-		h.vel = h.vel.normalized() * ALIEN_SPEED
+		h.vel = h.vel.normalized() * ALIEN_SPEED * _speed_scale
 		return
 	var target := _closest_on_path(h.pos, path)
-	var desired: Vector2 = (target - h.pos).normalized() * ALIEN_CHASE_SPEED
+	var desired: Vector2 = (target - h.pos).normalized() * ALIEN_CHASE_SPEED * _speed_scale
 	h.vel = h.vel.lerp(desired, minf(1.0, ALIEN_STEER_RATE * delta))
 
 

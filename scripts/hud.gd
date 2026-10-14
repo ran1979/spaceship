@@ -54,6 +54,10 @@ func show_message(text: String) -> void:
 	_message.visible = true
 
 
+func hide_message() -> void:
+	_message.visible = false
+
+
 func _label(parent: Node) -> Label:
 	var label := Label.new()
 	label.add_theme_color_override("font_color", TEXT_COLOR)
