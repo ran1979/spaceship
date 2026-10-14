@@ -24,6 +24,7 @@ func _process(_delta: float) -> bool:
 	_test_release_cancels()
 	_test_level_win()
 	_test_hazards()
+	_test_presents()
 	_test_game_flow()
 	_test_cut_signals()
 	print("cut tests: %s" % ("PASS" if _failures == 0 else "%d FAILED" % _failures))
@@ -174,6 +175,21 @@ func _test_hazards() -> void:
 	ship.free()
 
 
+# Presents: collected on touch, not when far away.
+func _test_presents() -> void:
+	var pres: Node2D = preload("res://scripts/presents.gd").new()
+	var log := []
+	pres.collected.connect(func(kind): log.append(kind))
+	pres.clear()
+	pres.add(Vector2(50, 50), "life")
+	pres.update(0.01, _square, Vector2(50, 50), 11.0)
+	_check_bool(log == ["life"], "present collected when ship touches it")
+	pres.add(Vector2(50, 50), "speed")
+	pres.update(0.01, _square, Vector2(90, 90), 11.0)
+	_check_bool(log == ["life"], "present not collected when ship is far away")
+	pres.free()
+
+
 # Cut start/end signals drive the drawing hum: fire on press and on release.
 func _test_cut_signals() -> void:
 	var ship := _ship_at_top_mid()
@@ -198,7 +214,7 @@ func _test_game_flow() -> void:
 
 	main._start_level(2)
 	_check_bool(main.get("_state") == MAIN.State.PLAYING and main._player.is_processing(), "next level resumes play")
-	_check_bool(main._hazards._items.size() == 9, "level 2 spawns 8 stars and 1 alien")
+	_check_bool(main._hazards._items.size() == 6, "level 2 spawns 5 stars and 1 alien")
 	_check_bool(is_equal_approx(main._coverage_percent(), 0.0), "next level starts with zero coverage")
 
 	main._player.lives = 1
@@ -210,7 +226,10 @@ func _test_game_flow() -> void:
 	main._start_game()
 	_check_bool(main.level == 1 and main._player.lives == 3, "restart returns to level 1 with full lives")
 	var cfg: Dictionary = main._level_config(3)
-	_check_bool(cfg.stars == 10 and cfg.aliens == 2, "level 3 has 10 stars and 2 aliens")
+	_check_bool(cfg.stars == 7 and cfg.aliens == 1, "level 3 has 7 stars and 1 alien")
+	cfg = main._level_config(1)
+	_check_bool(cfg.stars == 3 and cfg.aliens == 0, "level 1 is easy: 3 stars, no alien")
+	_check_bool(main._target_percent(1) == 60.0 and main._target_percent(2) == 65.0 and main._target_percent(9) == 75.0, "target is 60% on level 1, +5 per level, capped at 75%")
 	root.remove_child(main)
 	main.free()
 

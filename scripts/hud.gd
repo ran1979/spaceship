@@ -10,6 +10,7 @@ var _coverage: Label
 var _target: Label
 var _lives: Label
 var _level: Label
+var _status: Label
 var _message: Label
 
 
@@ -30,6 +31,7 @@ func _ready() -> void:
 	_target = _label(row)
 	_lives = _label(row)
 	_level = _label(row)
+	_status = _label(row)
 
 	_message = Label.new()
 	_message.anchor_right = 1.0
@@ -42,11 +44,12 @@ func _ready() -> void:
 	add_child(_message)
 
 
-func update_stats(coverage: float, target: float, lives: int, level: int) -> void:
+func update_stats(coverage: float, target: float, lives: int, level: int, status: String) -> void:
 	_coverage.text = "COVERAGE  %.1f%%" % coverage
 	_target.text = "TARGET  %d%%" % int(target)
 	_lives.text = "LIVES  %d" % lives
 	_level.text = "LEVEL  %d" % level
+	_status.text = status
 
 
 func show_message(text: String) -> void:

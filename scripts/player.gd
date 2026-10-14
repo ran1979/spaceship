@@ -16,6 +16,7 @@ const TURN_THRESHOLD := 0.5
 const TRAIL_COLOR := Color(1.0, 0.6, 0.2)
 
 var lives := 3
+var speed_mult := 1.0  # set by main while a speed present is active
 
 var _points := PackedVector2Array()
 var _edge := 0  # edge runs from _points[_edge] to _points[_edge + 1]
@@ -102,7 +103,7 @@ func step(input: Vector2, delta: float, cutting := false) -> void:
 		_turn(input, _vertex(_edge))
 	var along := input.dot(_edge_dir())
 	if absf(along) > TURN_THRESHOLD:
-		_dist = clampf(_dist + signf(along) * SPEED * delta, 0.0, _seg_len(_edge))
+		_dist = clampf(_dist + signf(along) * SPEED * speed_mult * delta, 0.0, _seg_len(_edge))
 	position = _points[_edge].lerp(_points[_vertex(_edge + 1)], _dist / _seg_len(_edge))
 
 
@@ -172,7 +173,7 @@ func _step_draw(input: Vector2, delta: float, cutting: bool) -> void:
 		return
 	if input == Vector2.ZERO:
 		return
-	var to := position + input.normalized() * SPEED * delta
+	var to := position + input.normalized() * SPEED * speed_mult * delta
 	if _retrace(to):
 		return
 	if _hits_own_trail(to):

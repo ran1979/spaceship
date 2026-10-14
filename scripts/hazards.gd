@@ -21,9 +21,9 @@ func spawn(region: PackedVector2Array, ship_pos: Vector2, star_count: int, alien
 	_speed_scale = speed_scale
 	for i in star_count:
 		var speed := randf_range(STAR_SPEED_MIN, STAR_SPEED_MAX) * speed_scale
-		add(_random_point_in(region, ship_pos), _random_dir() * speed, STAR_RADII.pick_random(), false)
+		add(random_point_in(region, ship_pos), _random_dir() * speed, STAR_RADII.pick_random(), false)
 	for i in alien_count:
-		add(_random_point_in(region, ship_pos), _random_dir() * ALIEN_SPEED * speed_scale, ALIEN_RADIUS, true)
+		add(random_point_in(region, ship_pos), _random_dir() * ALIEN_SPEED * speed_scale, ALIEN_RADIUS, true)
 
 
 func clear() -> void:
@@ -59,7 +59,7 @@ func hit_test(path: PackedVector2Array, ship_pos: Vector2) -> bool:
 func respawn_inside(claimed: PackedVector2Array, region: PackedVector2Array, ship_pos: Vector2) -> void:
 	for h in _items:
 		if Geometry2D.is_point_in_polygon(h.pos, claimed):
-			h.pos = _random_point_in(region, ship_pos)
+			h.pos = random_point_in(region, ship_pos)
 			h.vel = _random_dir() * h.vel.length()
 
 
@@ -106,7 +106,7 @@ func _bounce(h: Dictionary, region: PackedVector2Array, prev: Vector2) -> void:
 		h.pos = c + n * h.r
 
 
-func _random_point_in(region: PackedVector2Array, avoid: Vector2) -> Vector2:
+static func random_point_in(region: PackedVector2Array, avoid: Vector2) -> Vector2:
 	var lo := region[0]
 	var hi := region[0]
 	for p in region:
@@ -116,10 +116,10 @@ func _random_point_in(region: PackedVector2Array, avoid: Vector2) -> Vector2:
 		var p := Vector2(randf_range(lo.x, hi.x), randf_range(lo.y, hi.y))
 		if Geometry2D.is_point_in_polygon(p, region) and p.distance_to(avoid) > SPAWN_CLEARANCE:
 			return p
-	return _centroid(region)
+	return centroid(region)
 
 
-func _centroid(region: PackedVector2Array) -> Vector2:
+static func centroid(region: PackedVector2Array) -> Vector2:
 	var sum := Vector2.ZERO
 	for p in region:
 		sum += p

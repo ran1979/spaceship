@@ -62,6 +62,9 @@ tests/test_perimeter.gd Headless test suite
 ## Status
 
 All six build steps are implemented: movement, cutting, territory claiming, coverage HUD,
-hazards, and level progression. Each level adds hazards and speed. Reaching 75% coverage
-completes the level; running out of lives ends the game. Press Space on the
-transition screens to continue or restart.
+hazards, and level progression. Level 1 needs 60% coverage with 3 stars and no alien; the
+target rises 5% per level up to 75%, and hazards grow each level. Running out of lives ends
+the game. Press Space on the transition screens to continue or restart.
+
+Gift boxes appear at random spots in the field from time to time. Touch one to collect it:
+extra life, shield (5 s of immunity), speed boost (5 s), or slow hazards (5 s).
