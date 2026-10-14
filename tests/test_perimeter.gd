@@ -25,6 +25,7 @@ func _process(_delta: float) -> bool:
 	_test_level_win()
 	_test_hazards()
 	_test_game_flow()
+	_test_cut_signals()
 	print("cut tests: %s" % ("PASS" if _failures == 0 else "%d FAILED" % _failures))
 	quit(1 if _failures > 0 else 0)
 	return true
@@ -173,6 +174,18 @@ func _test_hazards() -> void:
 	ship.free()
 
 
+# Cut start/end signals drive the drawing hum: fire on press and on release.
+func _test_cut_signals() -> void:
+	var ship := _ship_at_top_mid()
+	var log := []
+	ship.cut_started.connect(func(): log.append("start"))
+	ship.cut_ended.connect(func(): log.append("end"))
+	ship.step(Vector2.DOWN, 0.1, true)
+	ship.step(Vector2.DOWN, 0.1, false)
+	_check_bool(log == ["start", "end"], "cut start and end signals fire on press and release")
+	ship.free()
+
+
 # Level flow: claim to 75% -> level done -> next level; lives run out -> game over -> restart.
 func _test_game_flow() -> void:
 	var main: Node2D = preload("res://scenes/Main.tscn").instantiate()
@@ -181,6 +194,7 @@ func _test_game_flow() -> void:
 	var field_area: float = 960.0 * 540.0
 	main._on_territory_claimed(poly, field_area * 0.8)
 	_check_bool(main.get("_state") == MAIN.State.LEVEL_DONE, "75%+ enters level done state")
+	_check_bool(main._sfx._claim.stream.get_length() > 0.0 and main._sfx._hum.stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "sounds synthesized, hum loops")
 
 	main._start_level(2)
 	_check_bool(main.get("_state") == MAIN.State.PLAYING and main._player.is_processing(), "next level resumes play")

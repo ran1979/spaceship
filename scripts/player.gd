@@ -5,6 +5,9 @@ extends Node2D
 # works for any polygon the cuts produce.
 
 signal territory_claimed(polygon: PackedVector2Array, area: float)
+signal cut_started
+signal cut_ended
+signal crashed
 
 const SPEED := 160.0
 const SNAP := 0.001  # edge-fraction tolerance for perimeter movement
@@ -73,11 +76,12 @@ func cut_path() -> PackedVector2Array:
 func crash() -> void:
 	if _drawing:
 		_cancel_cut(true)
-		return
-	lives = maxi(lives - 1, 0)
-	_edge = 0
-	_dist = 0.0
-	position = _points[0]
+	else:
+		lives = maxi(lives - 1, 0)
+		_edge = 0
+		_dist = 0.0
+		position = _points[0]
+	crashed.emit()
 
 
 func step(input: Vector2, delta: float, cutting := false) -> void:
@@ -151,6 +155,7 @@ func _edge_dir() -> Vector2:
 
 func _begin_cut() -> void:
 	_drawing = true
+	cut_started.emit()
 	_start = position
 	_start_edge = _edge
 	_start_dist = _dist
@@ -241,6 +246,7 @@ func _finish_cut(e: Vector2, e_edge: int, e_dist: float) -> void:
 	_drawing = false
 	_trail.clear()
 	_needs_release = true
+	cut_ended.emit()
 	territory_claimed.emit(loops[small], _area(loops[small]))
 
 
@@ -273,6 +279,7 @@ func _split_region(e: Vector2, e_edge: int, e_dist: float) -> Array:
 
 func _cancel_cut(lose_life: bool) -> void:
 	_drawing = false
+	cut_ended.emit()
 	_trail.clear()
 	position = _start
 	_edge = _start_edge

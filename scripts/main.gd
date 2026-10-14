@@ -17,6 +17,7 @@ const CRASH_INVULN := 1.0  # seconds of immunity after a crash
 @onready var _player: Node2D = $Player
 @onready var _hazards: Node2D = $Hazards
 @onready var _hud: CanvasLayer = $HUD
+@onready var _sfx: Node = $Sfx
 
 var level := 1
 var _state := State.PLAYING
@@ -27,6 +28,9 @@ var _invuln := 0.0
 
 func _ready() -> void:
 	_player.territory_claimed.connect(_on_territory_claimed)
+	_player.cut_started.connect(_sfx.draw_start)
+	_player.cut_ended.connect(_sfx.draw_stop)
+	_player.crashed.connect(_sfx.crash)
 	_start_game()
 
 
@@ -60,6 +64,7 @@ func _play(delta: float) -> void:
 
 
 func _on_territory_claimed(poly: PackedVector2Array, area: float) -> void:
+	_sfx.claim()
 	_claimed.append(poly)
 	_claimed_area += area
 	_hazards.respawn_inside(poly, _player.perimeter(), _player.position)
@@ -91,6 +96,7 @@ func _start_level(n: int) -> void:
 func _level_done() -> void:
 	_state = State.LEVEL_DONE
 	_player.set_process(false)
+	_sfx.level_passed()
 	_hud.show_message("LEVEL %d COMPLETE\n\nPress Space to continue" % level)
 
 
@@ -114,6 +120,8 @@ func _coverage_percent() -> float:
 
 
 func _draw_loop(poly: PackedVector2Array, color: Color) -> void:
+	if poly.is_empty():
+		return
 	var closed := poly.duplicate()
 	closed.append(poly[0])
 	draw_polyline(closed, Color(color, 0.25), BORDER_WIDTH * 3.0)
