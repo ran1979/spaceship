@@ -7,6 +7,7 @@ const BAR_BG := Color(0.02, 0.02, 0.06, 0.9)
 const TEXT_COLOR := Color(0.85, 0.95, 1.0)
 
 var _coverage: Label
+var _score: Label
 var _target: Label
 var _lives: Label
 var _level: Label
@@ -28,6 +29,7 @@ func _ready() -> void:
 	row.add_theme_constant_override("separation", 48)
 	add_child(row)
 	_coverage = _label(row)
+	_score = _label(row)
 	_target = _label(row)
 	_lives = _label(row)
 	_level = _label(row)
@@ -44,8 +46,9 @@ func _ready() -> void:
 	add_child(_message)
 
 
-func update_stats(coverage: float, target: float, lives: int, level: int, status: String) -> void:
+func update_stats(coverage: float, target: float, lives: int, level: int, status: String, score: int) -> void:
 	_coverage.text = "COVERAGE  %.1f%%" % coverage
+	_score.text = "SCORE  %d" % score
 	_target.text = "TARGET  %d%%" % int(target)
 	_lives.text = "LIVES  %d" % lives
 	_level.text = "LEVEL  %d" % level

@@ -1,8 +1,10 @@
 extends Node2D
 
 # Fixed playfield, centered in the viewport. HUD bar sits above it.
-# Flow: PLAYING -> LEVEL_DONE (press Space) -> next level, or GAME_OVER (press Space) -> level 1.
-enum State { PLAYING, LEVEL_DONE, GAME_OVER }
+# Flow: MENU -> PLAYING -> LEVEL_DONE (Space) -> next level, or GAME_OVER (Space) -> MENU.
+enum State { MENU, PLAYING, LEVEL_DONE, GAME_OVER }
+
+const Scores := preload("res://scripts/scores.gd")
 
 const FIELD_SIZE := Vector2(960, 540)
 const FIELD_BG := Color(0.03, 0.03, 0.10)
@@ -17,17 +19,22 @@ const SHIP_RADIUS := 11.0
 const POWERUP_TIME := 5.0
 const SPEED_MULT := 1.6
 const SLOW_FACTOR := 0.5  # hazards move at this fraction of normal speed during a slow present
+const POINTS_PER_PERCENT := 10  # score per percent of field claimed, times level
+const LEVEL_BONUS := 1000  # times level
 
 @onready var _player: Node2D = $Player
 @onready var _hazards: Node2D = $Hazards
 @onready var _presents: Node2D = $Presents
 @onready var _hud: CanvasLayer = $HUD
 @onready var _sfx: Node = $Sfx
+@onready var _menu: CanvasLayer = $Menu
 
 var level := 1
-var _state := State.PLAYING
+var _state := State.MENU
 var _claimed: Array[PackedVector2Array] = []
 var _claimed_area := 0.0
+var _score := 0
+var _score_path := Scores.SAVE_PATH  # tests point this elsewhere
 var _invuln := 0.0  # crash immunity
 var _shield_left := 0.0  # shield present
 var _speed_left := 0.0  # speed present
@@ -40,18 +47,22 @@ func _ready() -> void:
 	_player.cut_ended.connect(_sfx.draw_stop)
 	_player.crashed.connect(_sfx.crash)
 	_presents.collected.connect(_on_present)
-	_start_game()
+	_menu.play_pressed.connect(_start_game)
+	_show_menu()
 
 
 func _process(delta: float) -> void:
 	if _state == State.PLAYING:
 		_play(delta)
-	elif Input.is_action_just_pressed("cut"):
-		if _state == State.LEVEL_DONE:
-			_start_level(level + 1)
-		else:
-			_start_game()
-	_hud.update_stats(_coverage_percent(), _target_percent(level), _player.lives, level, _status_text())
+	elif Input.is_action_just_pressed("cut") or Input.is_action_just_pressed("ui_accept"):
+		match _state:
+			State.MENU:
+				_start_game()
+			State.LEVEL_DONE:
+				_start_level(level + 1)
+			State.GAME_OVER:
+				_show_menu()
+	_hud.update_stats(_coverage_percent(), _target_percent(level), _player.lives, level, _status_text(), _score)
 
 
 func _draw() -> void:
@@ -85,6 +96,8 @@ func _on_territory_claimed(poly: PackedVector2Array, area: float) -> void:
 	_sfx.claim()
 	_claimed.append(poly)
 	_claimed_area += area
+	var percent := area / (FIELD_SIZE.x * FIELD_SIZE.y) * 100.0
+	_score += roundi(percent * POINTS_PER_PERCENT) * level
 	_hazards.respawn_inside(poly, _player.perimeter(), _player.position)
 	queue_redraw()
 	if _coverage_percent() >= _target_percent(level):
@@ -103,7 +116,19 @@ func _on_present(kind: String) -> void:
 			_slow_left = POWERUP_TIME
 
 
+func _show_menu() -> void:
+	_state = State.MENU
+	_player.set_process(false)
+	_reset_field()
+	_hud.visible = false
+	_menu.show_scores(Scores.load_top(_score_path))
+	_menu.visible = true
+
+
 func _start_game() -> void:
+	_menu.visible = false
+	_hud.visible = true
+	_score = 0
 	_player.lives = STARTING_LIVES
 	_start_level(1)
 
@@ -111,6 +136,15 @@ func _start_game() -> void:
 func _start_level(n: int) -> void:
 	level = n
 	_state = State.PLAYING
+	_reset_field()
+	_player.set_process(true)
+	var cfg := _level_config(n)
+	_hazards.spawn(_player.perimeter(), _player.position, cfg.stars, cfg.aliens, cfg.speed, cfg.ghosts)
+	queue_redraw()
+
+
+# Clears the field back to a full border with no hazards, presents or effects.
+func _reset_field() -> void:
 	_claimed.clear()
 	_claimed_area = 0.0
 	_invuln = 0.0
@@ -118,26 +152,24 @@ func _start_level(n: int) -> void:
 	_speed_left = 0.0
 	_slow_left = 0.0
 	_player.restart(_perimeter_points())
-	_player.set_process(true)
 	_hazards.clear()
 	_presents.clear()
-	var cfg := _level_config(n)
-	_hazards.spawn(_player.perimeter(), _player.position, cfg.stars, cfg.aliens, cfg.speed)
 	_hud.hide_message()
-	queue_redraw()
 
 
 func _level_done() -> void:
 	_state = State.LEVEL_DONE
 	_player.set_process(false)
+	_score += LEVEL_BONUS * level
 	_sfx.level_passed()
-	_hud.show_message("LEVEL %d COMPLETE\n\nPress Space to continue" % level)
+	_hud.show_message("LEVEL %d COMPLETE\n\nScore %d\n\nPress Space to continue" % [level, _score])
 
 
 func _game_over() -> void:
 	_state = State.GAME_OVER
 	_player.set_process(false)
-	_hud.show_message("GAME OVER\n\nReached level %d\n\nPress Space to restart" % level)
+	Scores.submit(_score, level, _score_path)
+	_hud.show_message("GAME OVER\n\nScore %d\nReached level %d\n\nPress Space for the menu" % [_score, level])
 
 
 # Level 1 starts easy and each level adds hazards and speed.
@@ -145,6 +177,7 @@ func _level_config(n: int) -> Dictionary:
 	return {
 		"stars": 3 + 2 * (n - 1),
 		"aliens": n / 2,
+		"ghosts": (n - 1) / 2,
 		"speed": 1.0 + 0.12 * (n - 1),
 	}
 

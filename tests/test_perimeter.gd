@@ -4,6 +4,8 @@ extends SceneTree
 # Run: ./run.sh --headless -s res://tests/test_perimeter.gd
 
 const MAIN := preload("res://scripts/main.gd")
+const SCORES := preload("res://scripts/scores.gd")
+const TEST_SCORES := "user://test_scores.json"
 
 var _failures := 0
 var _square := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 100), Vector2(0, 100)])
@@ -25,6 +27,8 @@ func _process(_delta: float) -> bool:
 	_test_level_win()
 	_test_hazards()
 	_test_presents()
+	_test_ghosts()
+	_test_scores()
 	_test_touch_controls()
 	_test_game_flow()
 	_test_cut_signals()
@@ -128,6 +132,7 @@ func _test_release_cancels() -> void:
 func _test_level_win() -> void:
 	var main: Node2D = preload("res://scenes/Main.tscn").instantiate()
 	root.add_child(main)
+	main._start_game()
 	var poly := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
 	var field_area: float = 960.0 * 540.0
 	main._on_territory_claimed(poly, field_area * 0.5)
@@ -174,6 +179,35 @@ func _test_hazards() -> void:
 	_check(ship, Vector2(0, 0), "crash on perimeter respawns at first corner")
 	_check_bool(ship.lives == 2, "crash on perimeter costs one life")
 	ship.free()
+
+
+# High scores: sorted, capped at five, saved to a file.
+func _test_scores() -> void:
+	DirAccess.open("user://").remove("test_scores_board.json")
+	for score in [300, 900, 100, 700, 500, 1200]:
+		SCORES.submit(score, 1, "user://test_scores_board.json")
+	var top: Array = SCORES.load_top("user://test_scores_board.json")
+	_check_bool(top.size() == 5, "high score board keeps five entries")
+	_check_bool(int(top[0].score) == 1200 and int(top[4].score) == 300, "high score board is sorted best first")
+	DirAccess.open("user://").remove("test_scores_board.json")
+
+
+# Ghosts: three kinds spawn with their own behavior; stepping them is safe with a cut in progress.
+func _test_ghosts() -> void:
+	var haz: Node2D = preload("res://scripts/hazards.gd").new()
+	haz.spawn(_square, Vector2(0, 0), 0, 0, 1.0, 3)
+	var kinds := []
+	for h in haz._items:
+		kinds.append(h.ghost)
+	_check_bool(kinds == ["blinky", "pinky", "clyde"], "three ghosts spawn with blinky, pinky, clyde")
+	var path := PackedVector2Array([Vector2(50, 0), Vector2(50, 40)])
+	for i in 60:
+		haz.step(0.05, _square, path, Vector2(50, 40))
+	var inside := true
+	for h in haz._items:
+		inside = inside and Geometry2D.is_point_in_polygon(h.pos, _square)
+	_check_bool(inside, "ghosts stay inside the field")
+	haz.free()
 
 
 # Presents: collected on touch, not when far away.
@@ -224,10 +258,13 @@ func _test_cut_signals() -> void:
 func _test_game_flow() -> void:
 	var main: Node2D = preload("res://scenes/Main.tscn").instantiate()
 	root.add_child(main)
+	main._start_game()
 	var poly := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)])
 	var field_area: float = 960.0 * 540.0
+	main._score_path = TEST_SCORES
 	main._on_territory_claimed(poly, field_area * 0.8)
 	_check_bool(main.get("_state") == MAIN.State.LEVEL_DONE, "75%+ enters level done state")
+	_check_bool(main._score == 1800, "80% claim at level 1 scores 800, plus 1000 level bonus")
 	_check_bool(main._sfx._claim.stream.get_length() > 0.0 and main._sfx._hum.stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "sounds synthesized, hum loops")
 
 	main._start_level(2)
@@ -250,6 +287,7 @@ func _test_game_flow() -> void:
 	_check_bool(main._target_percent(1) == 60.0 and main._target_percent(2) == 65.0 and main._target_percent(9) == 75.0, "target is 60% on level 1, +5 per level, capped at 75%")
 	root.remove_child(main)
 	main.free()
+	DirAccess.open("user://").remove("test_scores.json")
 
 
 func _check(ship: Node2D, expected: Vector2, label: String) -> void:
