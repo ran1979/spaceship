@@ -8,6 +8,13 @@ to stop you.
 Built with Godot 4.x (GDScript). No external art or sound assets: everything is
 drawn with code.
 
+## Play in a browser
+
+https://ran1979.github.io/spaceship/
+
+Works on phones and tablets: a drag pad (bottom-left) moves the ship and a hold button
+(bottom-right) cuts. Landscape works best.
+
 ## Requirements
 
 - Godot 4.x with the `godot` command on your `PATH`
@@ -35,6 +42,15 @@ drawn with code.
 - Hitting your own cut, or being touched by a star, asteroid, or the alien, costs a life.
   A cut in progress is destroyed; on the border you respawn at the first corner.
 - Hazards caught inside a claimed area are moved to open space.
+
+## Web build
+
+The browser version lives in `docs/` and is served by GitHub Pages from that folder.
+To rebuild it after changes (needs the Godot 4.x web export templates):
+
+```sh
+godot --headless --path . --export-release "Web" docs/index.html
+```
 
 ## Tests
 

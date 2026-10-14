@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/hazards.gd" id="4_hazards"]
 [ext_resource type="Script" path="res://scripts/sfx.gd" id="5_sfx"]
 [ext_resource type="Script" path="res://scripts/presents.gd" id="6_presents"]
+[ext_resource type="Script" path="res://scripts/touch_controls.gd" id="7_touch"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -24,3 +25,6 @@ script = ExtResource("5_sfx")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
+
+[node name="TouchControls" type="Control" parent="HUD"]
+script = ExtResource("7_touch")

@@ -25,6 +25,7 @@ func _process(_delta: float) -> bool:
 	_test_level_win()
 	_test_hazards()
 	_test_presents()
+	_test_touch_controls()
 	_test_game_flow()
 	_test_cut_signals()
 	print("cut tests: %s" % ("PASS" if _failures == 0 else "%d FAILED" % _failures))
@@ -188,6 +189,23 @@ func _test_presents() -> void:
 	pres.update(0.01, _square, Vector2(90, 90), 11.0)
 	_check_bool(log == ["life"], "present not collected when ship is far away")
 	pres.free()
+
+
+# Touch pad drives move actions and the cut button drives the cut action.
+func _test_touch_controls() -> void:
+	var touch: Control = preload("res://scripts/touch_controls.gd").new()
+	touch.size = Vector2(1280, 720)
+	touch._on_press(0, Vector2(150, 570))
+	touch._update_pad(Vector2(230, 570))
+	_check_bool(Input.get_action_strength("move_right") > 0.5, "dragging pad right moves right")
+	_check_bool(Input.get_action_strength("move_left") == 0.0, "no left movement while dragging right")
+	touch._on_release(0)
+	_check_bool(Input.get_action_strength("move_right") == 0.0, "releasing pad stops movement")
+	touch._on_press(1, Vector2(1130, 570))
+	_check_bool(Input.is_action_pressed("cut"), "holding cut button presses cut")
+	touch._on_release(1)
+	_check_bool(not Input.is_action_pressed("cut"), "releasing cut button releases cut")
+	touch.free()
 
 
 # Cut start/end signals drive the drawing hum: fire on press and on release.
