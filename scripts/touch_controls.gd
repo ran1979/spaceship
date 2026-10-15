@@ -5,11 +5,11 @@ extends Control
 # The gameplay code reads touch and keyboard input the same way. Zones are whole halves
 # so a thumb never has to hit a small target, which matters on letterboxed phones.
 
-const PAD_RADIUS := 90.0
+const PAD_RADIUS := 105.0
 const PAD_MARGIN := Vector2(150, 150)  # where the idle stick hint sits
-const CUT_RADIUS := 75.0
+const CUT_RADIUS := 90.0
 const CUT_MARGIN := Vector2(150, 150)
-const KNOB_RADIUS := 34.0
+const KNOB_RADIUS := 40.0
 const DEAD_ZONE := 0.15
 
 var _active := false  # shown once the device reports touch
@@ -88,13 +88,25 @@ func _cut_center() -> Vector2:
 func _draw() -> void:
 	if not _active:
 		return
+	var font := ThemeDB.fallback_font
 	var pc := _pad_center()
 	var grabbed := _pad_touch != -1
-	draw_circle(pc, PAD_RADIUS, Color(1, 1, 1, 0.16 if grabbed else 0.10))
-	draw_arc(pc, PAD_RADIUS, 0.0, TAU, 48, Color(1, 1, 1, 0.35), 2.0)
-	draw_circle(pc + _knob * PAD_RADIUS, KNOB_RADIUS, Color(1, 1, 1, 0.35))
+	# Stick: filled disc, bright ring, direction chevrons and a label so it reads as a control.
+	draw_circle(pc, PAD_RADIUS, Color(0.3, 0.9, 1.0, 0.22 if grabbed else 0.14))
+	draw_arc(pc, PAD_RADIUS, 0.0, TAU, 64, Color(0.3, 0.9, 1.0, 0.85), 4.0)
+	for d in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+		var tip: Vector2 = pc + d * (PAD_RADIUS * 0.72)
+		var side: Vector2 = d.orthogonal() * 12.0
+		draw_colored_polygon(PackedVector2Array([tip + d * 14.0, tip - side, tip + side]), Color(0.3, 0.9, 1.0, 0.6))
+	if grabbed:
+		draw_line(pc, pc + _knob * PAD_RADIUS, Color(0.3, 0.9, 1.0, 0.5), 3.0)
+	draw_circle(pc + _knob * PAD_RADIUS, KNOB_RADIUS, Color(0.3, 0.9, 1.0, 0.7 if grabbed else 0.45))
+	draw_string(font, pc + Vector2(-60, PAD_RADIUS + 28), "MOVE", HORIZONTAL_ALIGNMENT_CENTER, 120, 22, Color(0.85, 0.95, 1.0, 0.9))
 
+	# Cut zone: orange button with a label, brighter while held.
 	var cc := _cut_center()
 	var held := _cut_touch != -1
-	draw_circle(cc, CUT_RADIUS, Color(1.0, 0.6, 0.2, 0.5 if held else 0.18))
-	draw_arc(cc, CUT_RADIUS, 0.0, TAU, 48, Color(1.0, 0.7, 0.3, 0.6), 3.0)
+	draw_circle(cc, CUT_RADIUS, Color(1.0, 0.6, 0.2, 0.6 if held else 0.3))
+	draw_arc(cc, CUT_RADIUS, 0.0, TAU, 64, Color(1.0, 0.7, 0.3, 0.95), 4.0)
+	draw_string(font, cc + Vector2(-60, 9), "CUT", HORIZONTAL_ALIGNMENT_CENTER, 120, 30, Color(1, 1, 1, 0.95))
+	draw_string(font, cc + Vector2(-60, CUT_RADIUS + 28), "HOLD", HORIZONTAL_ALIGNMENT_CENTER, 120, 22, Color(1.0, 0.85, 0.6, 0.9))
