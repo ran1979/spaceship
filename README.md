@@ -11,8 +11,8 @@ sounds are all generated in code.
 
 https://ran1979.github.io/spaceship/
 
-Works on phones and tablets: a drag pad (bottom-left) moves the ship and a hold button
-(bottom-right) cuts. Landscape works best.
+Works on phones and tablets: touch the left half and drag to move the ship (the stick follows your
+thumb), hold the right half to cut. Landscape works best.
 
 ## Requirements
 
@@ -31,8 +31,8 @@ Works on phones and tablets: a drag pad (bottom-left) moves the ship and a hold 
 
 | Action              | Keys                              | Touch                   |
 |---------------------|-----------------------------------|-------------------------|
-| Move                | Arrow keys or WASD                | Drag pad (bottom-left)  |
-| Draw a cut          | Hold Space and move inward        | Hold cut button (bottom-right) |
+| Move                | Arrow keys or WASD                | Drag in left half       |
+| Draw a cut          | Hold Space and move inward        | Hold right half         |
 | Menu: play          | Space or Enter                    | Tap PLAY                |
 | Continue / restart  | Space                             | Tap cut button          |
 
