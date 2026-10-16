@@ -19,6 +19,8 @@ const SHIP_RADIUS := 11.0
 const POWERUP_TIME := 5.0
 const SPEED_MULT := 1.6
 const SLOW_FACTOR := 0.5  # hazards move at this fraction of normal speed during a slow present
+const EXTRA_LIFE_MARGIN := 5.0  # percentage points above target that earn a bonus life
+const FREEZE_TIME := 5.0  # seconds all hazards stop moving after a freeze present
 const POINTS_PER_PERCENT := 10  # score per percent of field claimed, times level
 const LEVEL_BONUS := 1000  # times level
 
@@ -39,6 +41,8 @@ var _invuln := 0.0  # crash immunity
 var _shield_left := 0.0  # shield present
 var _speed_left := 0.0  # speed present
 var _slow_left := 0.0  # slow present
+var _freeze_left := 0.0  # freeze present
+var _smash_left := 0.0  # smash present
 
 
 func _ready() -> void:
@@ -78,13 +82,19 @@ func _play(delta: float) -> void:
 	_shield_left = maxf(_shield_left - delta, 0.0)
 	_speed_left = maxf(_speed_left - delta, 0.0)
 	_slow_left = maxf(_slow_left - delta, 0.0)
+	_freeze_left = maxf(_freeze_left - delta, 0.0)
+	_smash_left = maxf(_smash_left - delta, 0.0)
 	_player.speed_mult = SPEED_MULT if _speed_left > 0.0 else 1.0
 	var hazard_dt := delta * (SLOW_FACTOR if _slow_left > 0.0 else 1.0)
+	if _freeze_left > 0.0:
+		hazard_dt = 0.0
 
 	_hazards.step(hazard_dt, _player.perimeter(), _player.cut_path(), _player.position)
 	_presents.update(delta, _player.perimeter(), _player.position, SHIP_RADIUS)
+	if _smash_left > 0.0 and _hazards.smash_touching(_player.cut_path(), _player.position) > 0:
+		_sfx.explode()
 
-	var can_be_hit := _invuln <= 0.0 and _shield_left <= 0.0
+	var can_be_hit := _invuln <= 0.0 and _shield_left <= 0.0 and _smash_left <= 0.0
 	if can_be_hit and _hazards.hit_test(_player.cut_path(), _player.position):
 		_player.crash()
 		_invuln = CRASH_INVULN
@@ -115,6 +125,10 @@ func _on_present(kind: String) -> void:
 			_speed_left = POWERUP_TIME
 		"slow":
 			_slow_left = POWERUP_TIME
+		"freeze":
+			_freeze_left = FREEZE_TIME
+		"smash":
+			_smash_left = POWERUP_TIME
 
 
 func _show_menu() -> void:
@@ -152,6 +166,8 @@ func _reset_field() -> void:
 	_shield_left = 0.0
 	_speed_left = 0.0
 	_slow_left = 0.0
+	_freeze_left = 0.0
+	_smash_left = 0.0
 	_player.restart(_perimeter_points())
 	_hazards.clear()
 	_presents.clear()
@@ -162,8 +178,15 @@ func _level_done() -> void:
 	_state = State.LEVEL_DONE
 	_player.set_process(false)
 	_score += LEVEL_BONUS * level
-	_sfx.level_passed()
-	_hud.show_message("LEVEL %d COMPLETE\n\nScore %d\n\nPress Space to continue" % [level, _score])
+	var bonus_life := _coverage_percent() >= _target_percent(level) + EXTRA_LIFE_MARGIN
+	var msg := "LEVEL %d COMPLETE\n\nScore %d\n\nPress Space to continue" % [level, _score]
+	if bonus_life:
+		_player.lives += 1
+		_sfx.extra_life()
+		msg = "LEVEL %d COMPLETE\n\nEXTRA LIFE!\n\nScore %d\n\nPress Space to continue" % [level, _score]
+	else:
+		_sfx.level_passed()
+	_hud.show_message(msg)
 
 
 func _game_over() -> void:
@@ -175,12 +198,27 @@ func _game_over() -> void:
 
 # Level 1 starts easy and each level adds hazards and speed.
 func _level_config(n: int) -> Dictionary:
-	return {
-		"stars": 3 + 2 * (n - 1),
+	var cfg := {
+		"stars": mini(3 + 2 * (n - 1), 5),
 		"aliens": n / 2,
 		"ghosts": (n - 1) / 2,
 		"speed": 1.0 + 0.12 * (n - 1),
 	}
+	# Hand-set mixes for levels 2-4; level 5 on keeps the scaling above, stars capped at 5.
+	match n:
+		2:
+			cfg.stars = 4
+			cfg.aliens = 1
+			cfg.ghosts = 0
+		3:
+			cfg.stars = 0
+			cfg.aliens = 3
+			cfg.ghosts = 0
+		4:
+			cfg.stars = 5
+			cfg.aliens = 1
+			cfg.ghosts = 1
+	return cfg
 
 
 # Each level claims in its own hue, so progress is easy to tell apart.
@@ -208,6 +246,10 @@ func _status_text() -> String:
 		parts.append("SPEED %ds" % ceili(_speed_left))
 	if _slow_left > 0.0:
 		parts.append("SLOW %ds" % ceili(_slow_left))
+	if _freeze_left > 0.0:
+		parts.append("FREEZE %ds" % ceili(_freeze_left))
+	if _smash_left > 0.0:
+		parts.append("SMASH %ds" % ceili(_smash_left))
 	return "  ".join(parts)
 
 

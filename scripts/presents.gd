@@ -11,6 +11,8 @@ const KINDS := {
 	"shield": Color(0.4, 0.8, 1.0),
 	"speed": Color(1.0, 0.85, 0.3),
 	"slow": Color(0.7, 0.5, 1.0),
+	"freeze": Color(0.8, 1.0, 1.0),
+	"smash": Color(1.0, 0.4, 1.0),
 }
 const RADIUS := 10.0
 const LIFETIME := 12.0

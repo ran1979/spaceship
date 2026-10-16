@@ -115,13 +115,30 @@ func step(delta: float, region: PackedVector2Array, path: PackedVector2Array, sh
 # True if any hazard touches the cut path or the ship.
 func hit_test(path: PackedVector2Array, ship_pos: Vector2) -> bool:
 	for h in _items:
-		if h.dead > 0.0:
-			continue
-		if h.pos.distance_to(ship_pos) < h.r + SHIP_RADIUS:
+		if _touches(h, path, ship_pos):
 			return true
-		for i in range(path.size() - 1):
-			if Geometry2D.get_closest_point_to_segment(h.pos, path[i], path[i + 1]).distance_to(h.pos) < h.r:
-				return true
+	return false
+
+
+# Smash present: enemies touching the cut path or the ship die like ones caught in a claim. Returns how many.
+func smash_touching(path: PackedVector2Array, ship_pos: Vector2) -> int:
+	var killed := 0
+	for h in _items:
+		if h.dead <= 0.0 and _touches(h, path, ship_pos):
+			h.dead = RESPAWN_TIME
+			h.boom = BOOM_TIME
+			killed += 1
+	return killed
+
+
+func _touches(h: Dictionary, path: PackedVector2Array, ship_pos: Vector2) -> bool:
+	if h.dead > 0.0:
+		return false
+	if h.pos.distance_to(ship_pos) < h.r + SHIP_RADIUS:
+		return true
+	for i in range(path.size() - 1):
+		if Geometry2D.get_closest_point_to_segment(h.pos, path[i], path[i + 1]).distance_to(h.pos) < h.r:
+			return true
 	return false
 
 

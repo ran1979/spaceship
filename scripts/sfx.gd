@@ -11,6 +11,7 @@ const NOISE := 2
 var _claim: AudioStreamPlayer
 var _crash: AudioStreamPlayer
 var _level: AudioStreamPlayer
+var _extra_life: AudioStreamPlayer
 var _hum: AudioStreamPlayer
 var _explode: AudioStreamPlayer
 
@@ -26,6 +27,14 @@ func _ready() -> void:
 		_seg(659, 659, 0.12, SQUARE, 0.3),
 		_seg(784, 784, 0.12, SQUARE, 0.3),
 		_seg(1046, 1046, 0.4, SQUARE, 0.3),
+	]))
+	# Bright high arpeggio ending in a held note: bonus life earned.
+	_extra_life = _player(_synth([
+		_seg(784, 784, 0.1, SQUARE, 0.3),
+		_seg(988, 988, 0.1, SQUARE, 0.3),
+		_seg(1175, 1175, 0.1, SQUARE, 0.3),
+		_seg(1568, 1568, 0.1, SQUARE, 0.3),
+		_seg(2093, 2093, 0.5, SINE, 0.35),
 	]))
 	# Low sustained tone, looped while a cut is being drawn.
 	_hum = _player(_synth([_seg(200, 200, 0.5, SINE, 0.12, false)], true))
@@ -52,6 +61,10 @@ func crash() -> void:
 
 func level_passed() -> void:
 	_level.play()
+
+
+func extra_life() -> void:
+	_extra_life.play()
 
 
 func draw_start() -> void:

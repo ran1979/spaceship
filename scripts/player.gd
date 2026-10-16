@@ -177,7 +177,7 @@ func _step_draw(input: Vector2, delta: float, cutting: bool) -> void:
 	if _retrace(to):
 		return
 	if _hits_own_trail(to):
-		_cancel_cut(true)
+		_cancel_cut(false)
 		return
 	var hit := _boundary_hit(to)
 	if not hit.is_empty():

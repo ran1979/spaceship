@@ -91,14 +91,14 @@ func _test_claim_split() -> void:
 	ship.free()
 
 
-# Trail loops back across its first segment: cancel, lose a life, return to start.
+# Trail loops back across its first segment: cancel like a release, no life lost, return to start.
 func _test_self_collision() -> void:
 	var ship := _ship_at_top_mid()
 	ship.step(Vector2.DOWN, 0.1, true)
 	ship.step(Vector2.LEFT, 0.2, true)
 	ship.step(Vector2(42, -8), 0.27, true)
 	_check(ship, Vector2(50, 0), "self-hit returns ship to start")
-	_check_bool(ship.lives == 2, "self-hit costs one life")
+	_check_bool(ship.lives == 3, "self-hit costs no life")
 	ship.free()
 
 
@@ -139,6 +139,10 @@ func _test_level_win() -> void:
 	_check_bool(main._player.is_processing(), "50% coverage keeps playing")
 	main._on_territory_claimed(poly, field_area * 0.3)
 	_check_bool(not main._player.is_processing(), "80% coverage ends the level")
+	_check_bool(main._player.lives == 4, "finishing 5+ points over target earns an extra life")
+	main._start_game()
+	main._on_territory_claimed(poly, field_area * 0.62)
+	_check_bool(main._player.lives == 3, "finishing just over target gives no extra life")
 	root.remove_child(main)
 	main.free()
 
@@ -168,6 +172,8 @@ func _test_hazards() -> void:
 	_check_bool(haz.hit_test(PackedVector2Array(), Vector2(60, 50)), "hazard touching ship is a hit")
 	_check_bool(not haz.hit_test(PackedVector2Array(), Vector2(80, 50)), "distant ship is not a hit")
 	_check_bool(haz.hit_test(PackedVector2Array([Vector2(0, 53), Vector2(100, 53)]), Vector2(0, 0)), "hazard touching cut line is a hit")
+	_check_bool(haz.smash_touching(PackedVector2Array(), Vector2(60, 50)) == 1 and haz._items[0].dead > 0.0, "smash kills enemy the ship touches")
+	_check_bool(not haz.hit_test(PackedVector2Array(), Vector2(60, 50)), "smashed enemy no longer hits")
 	haz.free()
 
 	var ship := _ship_at_top_mid()
@@ -277,7 +283,7 @@ func _test_game_flow() -> void:
 
 	main._start_level(2)
 	_check_bool(main.get("_state") == MAIN.State.PLAYING and main._player.is_processing(), "next level resumes play")
-	_check_bool(main._hazards._items.size() == 6, "level 2 spawns 5 stars and 1 alien")
+	_check_bool(main._hazards._items.size() == 5, "level 2 spawns 4 stars and 1 alien")
 	_check_bool(is_equal_approx(main._coverage_percent(), 0.0), "next level starts with zero coverage")
 
 	main._player.lives = 1
@@ -289,9 +295,13 @@ func _test_game_flow() -> void:
 	main._start_game()
 	_check_bool(main.level == 1 and main._player.lives == 3, "restart returns to level 1 with full lives")
 	var cfg: Dictionary = main._level_config(3)
-	_check_bool(cfg.stars == 7 and cfg.aliens == 1, "level 3 has 7 stars and 1 alien")
+	_check_bool(cfg.stars == 0 and cfg.aliens == 3 and cfg.ghosts == 0, "level 3 is 3 aliens only")
+	cfg = main._level_config(4)
+	_check_bool(cfg.stars == 5 and cfg.aliens == 1 and cfg.ghosts == 1, "level 4 has 5 stars, 1 alien, 1 ghost")
 	cfg = main._level_config(1)
 	_check_bool(cfg.stars == 3 and cfg.aliens == 0, "level 1 is easy: 3 stars, no alien")
+	cfg = main._level_config(9)
+	_check_bool(cfg.stars == 5 and cfg.aliens == 4 and cfg.ghosts == 4, "later levels keep 5 stars max, aliens and ghosts grow")
 	_check_bool(main._target_percent(1) == 60.0 and main._target_percent(2) == 65.0 and main._target_percent(9) == 75.0, "target is 60% on level 1, +5 per level, capped at 75%")
 	root.remove_child(main)
 	main.free()
